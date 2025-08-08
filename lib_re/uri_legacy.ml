@@ -579,20 +579,31 @@ module Query = struct
    * this function.
   *)
   let encoded_of_query ?scheme l =
-    let len = List.fold_left (fun a (k,v) ->
-        a + (String.length k)
-        + (List.fold_left (fun a s -> a+(String.length s)+1) 0 v) + 2) (-1) l in
-    let buf = Buffer.create len in
-    iter_concat (fun buf (k,v) ->
-        Buffer.add_string buf (pct_encode ?scheme ~component:`Query_key k);
-        if v <> [] then (
-          Buffer.add_char buf '=';
-          iter_concat (fun buf s ->
-              Buffer.add_string buf
-                (pct_encode ?scheme ~component:`Query_value s)
-            ) "," buf v)
-      ) "&" buf l;
-    Buffer.contents buf
+    match l with
+    | [] -> ""
+    | l ->
+      let len =
+        List.fold_left
+          (fun a (k, v) ->
+             a + String.length k
+             + (List.fold_left (fun a s -> a + String.length s + 1) 0 v)
+             + 2)
+          0 l - 1
+      in
+      let buf = Buffer.create len in
+      iter_concat
+        (fun buf (k, v) ->
+           Buffer.add_string buf
+             (pct_encode ?scheme ~component:`Query_key k);
+           if v <> [] then (
+             Buffer.add_char buf '=';
+             iter_concat
+               (fun buf s ->
+                  Buffer.add_string buf
+                    (pct_encode ?scheme ~component:`Query_value s))
+               "," buf v))
+        "&" buf l;
+      Buffer.contents buf
 
   let of_raw qs =
     let lazy_query = Lazy.from_fun (fun () -> query_of_encoded qs) in
